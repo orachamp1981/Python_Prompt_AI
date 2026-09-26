@@ -26,7 +26,7 @@ from pathlib import Path
 CONCEPTS_FILE = Path("concepts.json")
 CANDIDATES_FILE = Path("synonym_candidates.json")
 
-OLLAMA_URL = "C:\Users\nadir.ali\.ollama"
+OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.1"  # change to whatever model you've pulled locally
 
 # Context helps the LLM stay on-domain rather than guessing generically.

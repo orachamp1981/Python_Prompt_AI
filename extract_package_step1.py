@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import datetime
 
 from databases import get_db_connection
+import light_path
 
 # Where extracted packages get saved, one folder per package
 STORE_DIR = Path("extracted_packages")
@@ -292,8 +293,12 @@ def scan_db_links(source_text: str) -> list:
     doesn't always surface these cleanly, so a text scan is the reliable
     backstop.
     """
+    KNOWN_ANNOTATIONS = {
+        "LABEL", "CONCEPT", "DERIVED", "LOGIC", "BUSINESS", "TABLE", "PROCESS",
+        "LIGHT_BASE", "LIGHT_ALLOW", "LIGHT_BLOCK", "LIGHT_FILTER", "LIGHT_COUNT_KEY",
+    }
     matches = re.findall(r"@(\w+)", source_text)
-    return sorted(set(m.upper() for m in matches))
+    return sorted(set(m.upper() for m in matches if m.upper() not in KNOWN_ANNOTATIONS))
 
 
 def extract_package(package_name: str, database_name: str = "PQTEPF", force: bool = False) -> dict:
@@ -329,6 +334,7 @@ def extract_package(package_name: str, database_name: str = "PQTEPF", force: boo
             proc_data["arguments"] = arguments.get(proc_name, [])
             proc_data["procedure_label"] = parse_procedure_label(proc_data["source"])
             proc_data["column_tags"] = parse_column_tags(proc_data["source"])
+            proc_data["light_path"] = light_path.parse_light_annotations(proc_data["source"])
 
         result = {
             "package_name": package_name.upper(),

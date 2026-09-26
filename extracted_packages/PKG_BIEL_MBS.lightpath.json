@@ -1,0 +1,34 @@
+{
+  "enabled": true,
+  "base_alias": "T1",
+  "base_table": "EPF_UW_DOCUMENT",
+  "count_key": "T1.DOCUMENT_ID_PK",
+  "allowed_tables": [
+    "EPF_UW_DOCUMENT",
+    "EPF_UW_EMPLOYEES",
+    "EPF_GEN_ST_PARTICIPANT",
+    "EPF_GEN_ST_PLAN",
+    "EPF_GEN_ST_SETUP_CATEGORY_DTL",
+    "EPF_GEN_ST_OCCUPATION",
+    "EPF_GEN_ST_CITY",
+    "EPF_UW_DOC_REQUIREMENT"
+  ],
+  "blocked_tables": [
+    "BUSINESS_010226",
+    "EPF_ACC_TRANSACTION",
+    "EPF_ACC_TRANSACTION_DTL",
+    "EPF_UW_AGENCY_BOOKING",
+    "AMMM_AGENT_MASTER@PENTA_FTPROD",
+    "VU_REGION_BRANCH_LOCATION_SORTING@PENTA_FTPROD",
+    "EPF_UW_RATING",
+    "EPF_GEN_ST_PRODCUT_DTL",
+    "EPF_UW_EMP_CATEGORY",
+    "EPF_CLM_MASTER",
+    "EPF_CLM_DETAIL",
+    "VU_POLICY_AGENT_BRANCH"
+  ],
+  "mandatory_filters": [
+    "T1.PARTICIPANT_TYPE = 'I'",
+    "T1.COMPANYID_FK = :p_company_code"
+  ]
+}
