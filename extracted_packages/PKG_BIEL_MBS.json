@@ -1,0 +1,6778 @@
+{
+  "package_name": "PKG_BIEL_MBS",
+  "database": "PQTEPF",
+  "extracted_at": "2026-09-24T15:46:59.343043",
+  "procedure_count": 1,
+  "procedures": {
+    "MBS_DOCUMENT_DETAIL": {
+      "type": "PROCEDURE",
+      "source": "PROCEDURE MBS_DOCUMENT_DETAIL (\n        p_sdate        IN  DATE,\n        p_edate        IN  DATE,\n        p_company_code IN  NUMBER,\n        p_result       OUT SYS_REFCURSOR\n    );\n\nEND PKG_BIEL_MBS;\n\n-- PACKAGE BODY --\nPACKAGE BODY        PKG_BIEL_MBS AS\n\n    PROCEDURE MBS_DOCUMENT_DETAIL (\n        p_sdate        IN  DATE,\n        p_edate        IN  DATE,\n        p_company_code IN  NUMBER,\n        p_result       OUT SYS_REFCURSOR\n    )\n    IS\n    BEGIN\n                                        -- @label: MBS Business Logic Initiator\n        OPEN p_result FOR\n                                      \n            SELECT\n                DOCUMENT_CODE,                  -- @label: Policy Number | Policy | Document No | Document Code \n                PARTICIPANT_NAME,               -- @label: Client Name | Participant | Customer | Policy Holder\n                PROPOSER_NAME,                  -- @label: Contract Initiator | Premium Payer | Information Provider\n                OCCUPATION,                     -- @label: Profession | Job Category | Job Nature | Nature of Job\n                DOB,                            -- @label: Date of Birth | Birth Date \n                CNIC_NO,                        -- @label: CNIC Number | CNIC | National Identity Card Number | NIC Number | Identity Card No\n                SUBMISSION_DATE,                -- @label: Date of Submission | Submission Date | Document Submisiion Date\n                ISSUANCE_DATE,                  -- @label: Policy Issuance Date | Policy Issued | Policy Started\n                PLAN_NAME,                      -- @label: Plan Name | Policy Plan | Plan Purchased\n                PRODUCT_TYPE,                   -- @label: Plan Product | Product Name | Product Type | Product for Policy\n                POLICY_STATUS,                  -- @label: Policy Status | Status of Policy | Status Hold\n                CONTRIBUTION,                   -- @label: Contributiion | Contributed | Contribution Received\n                MODE_OF_PAYMENT,                -- @label: Payment Mode | Payment Mehtod | Paid Type\n                DUE_AMOUNT,                     -- @label: Amount Receivable | Payment Due | Payment Awaited\n                PARTICIPANT_TYPE,               -- @label: Participant Type | Participant Category | Participant Guardian\n                MEDICAL,                        -- @label: Medical \n                NVL(TOPUP,0) TOPUP,             -- @label: Policy Topup | Topup | Amount Added Topup\n                BRANCH_NAME,                    -- @label: Branch Name | Region Branch\n                REGION,                         -- @label: Region | Policy Region Base \n                CITY_NAME,                      -- @label: Region City Name | Region City\n                RESIDENTIAL_STATUS,             -- @label: Residential Staus | Resident\n                SOURCE_CHANNEL,                 -- @label: Source Channel | Policy Elevation | Source Get\n                gender,                         -- @label: Participant Gender | Participant Sex\n                age,                            -- @label: Participant Age\n                ADMIN_ALLOCATION_CHARGES,       -- @label: Admin Charges | Allocation Charges\n                PRODUCT_NAME,                   -- @label: Product Name | Policy Product Name\n                COUNTRY,                        -- @label: Policy Holder Country | Country of Policy Holder\n                SOURCE_TYPE_NAME,               -- @label: Plicy Elevated Source\n                RECEIVED_AMOUNT,                -- @label: Amount Received in Finance | Finance Amount Received Policy\n\n                /* your remaining query exactly here */\n\n                CASE\n                    WHEN ISSUANCE_DATE BETWEEN p_sdate AND p_edate\n                    THEN 'Current'\n                    ELSE 'Previous'\n                END INVEST_STATUS \n                -- @concept: INVEST_STATUS\n                -- @derived: true\n                -- @logic: Current if ISSUANCE_DATE falls within the requested date range (p_sdate/p_edate), else Previous \n\n            FROM\n            (\n                \n                   SELECT DOCUMENT_CODE,\n       PARTICIPANT_NAME,\n       PROPOSER_NAME,\n       CATEGORY_ID_FK occupation_class,\n       OCCUPATION,\n       DOB,\n       CNIC_NO,\n       SUBMISSION_DATE,\n       ISSUANCE_DATE,\n       PLAN_NAME,\n       PRODUCT_TYPE,\n       POLICY_STATUS,\n       CONTRIBUTION,\n       MODE_OF_PAYMENT,\n       DUE_AMOUNT,\n       PARTICIPANT_TYPE,\n       MEDICAL,\n       NVL(TOPUP,0) TOPUP,\n       BRANCH_NAME,\n       REGION,\n       CITY_NAME,\n       RESIDENTIAL_STATUS,\n       SOURCE_CHANNEL,\n       gender,\n       age,\n      /* allocation_charges,\n       admin_charges,*/\n       ADMIN_ALLOCATION_CHARGES,\n       PRODUCT_NAME,\n       COUNTRY,SOURCE_TYPE_NAME,\n       RECEIVED_AMOUNT,\n       (SELECT NVL(SUM(TD.TRANSACTION_AMOUNT), 0) \n                  FROM EPF_ACC_TRANSACTION TM, EPF_ACC_TRANSACTION_DTL TD\n                 WHERE 1 = 1\n                   AND TM.TRANSACTION_ID_PK = TD.TRANSACTION_ID_FK\n                   AND TM.TRANSACTION_FLAG IN ('R')\n                   AND TRUNC(tm.approved_date) BETWEEN p_SDATE AND p_EDATE \n                   AND TM.DOCUMENT_ID_FK = DOCUMENT_ID_PK) RECEIVED_AMOUNT1,\n                   \n                   EMP_STATUS,ISSUE_DATE,AGENT_CODE,\n--LOADING_VALUE_ID,\n    \n(\nSELECT CLM.DECISION_DATE\nFROM EPF_CLM_MASTER CLM, EPF_CLM_DETAIL CD\nWHERE CLM.CLAIM_ID_PK = CD.CLAIM_ID_FK\nAND   CD.DOCUMENT_ID_FK = DOCUMENT_ID_PK\nAND   CD.EMPLOYEE_ID_FK=EMPLOYEE_ID_PK\n) DECISION_DATE,\n\n\n(\nSELECT CD1.SETUP_DESCRIPTION\nFROM EPF_CLM_MASTER CLM, EPF_CLM_DETAIL CD,EPF_GEN_ST_SETUP_CATEGORY_DTL CD1\nWHERE CLM.CLAIM_ID_PK = CD.CLAIM_ID_FK\nAND CD1.SETUP_DTL_ID_PK = CLM.CLAIM_CAUSE_ID\nAND   CD.DOCUMENT_ID_FK(+) = DOCUMENT_ID_PK\nAND   CD.EMPLOYEE_ID_FK=EMPLOYEE_ID_PK\n) DEATH_REASON,\n                                    case\n                                    when ISSUANCE_DATE between P_sdate and p_edate then\n                                     'Current'\n                                    else\n                                     'Previous'\n                                  end Invest_Status\n\n  FROM (SELECT T1.DOCUMENT_ID_PK,\n               T1.DOCUMENT_CODE,\n               T2.EMPLOYEE_ID_PK,\n               T3.PARTICIPANT_NAME,\n               NULL PROPOSER_NAME,\n               T6.CATEGORY_ID_FK,\n               T6.OCCUPATION_NAME OCCUPATION,\n               Q4.INDIVIDUAL_CONTRIBUTION RECEIVED_AMOUNT,\n               T2.DOB,\n               T2.CNIC_NO,\n               TO_DATE(T1.ENTER_DATE) SUBMISSION_DATE,\n               T2.UW_APPROVED_DATE ISSUANCE_DATE,\n               --t16.approved_date ISSUANCE_DATE,  ---change\n               T4.PLAN_NAME,\n               T5.SETUP_DESCRIPTION PRODUCT_TYPE,\n               (SELECT SETUP_DESCRIPTION\n                  FROM EPF_GEN_ST_SETUP_CATEGORY_DTL D\n                 WHERE D.SETUP_DTL_ID_PK = T2.EMP_STATUS_ID_FK) POLICY_STATUS,\n               T2.CONTRIBUTION,\n               (SELECT SETUP_DESCRIPTION\n                  FROM EPF_GEN_ST_SETUP_CATEGORY_DTL D\n                 WHERE D.SETUP_DTL_ID_PK = T1.MODE_OF_PAYMENT_ID) MODE_OF_PAYMENT,\n               T2.DUE_AMOUNT,\n               DECODE(T1.PARTICIPANT_TYPE,\n                      'I',\n                      'INDIVIDUAL',\n                      'C',\n                      'CORPORATE') PARTICIPANT_TYPE,\n               (SELECT R.DOC_CODE\n                  FROM EPF_UW_DOC_REQUIREMENT R\n                 WHERE R.DOC_CODE = 'M-PE'\n                   AND R.DOCUMENT_ID_FK = T1.DOCUMENT_ID_PK) MEDICAL,\n               Q1.TOPUP,\n               T11.BRANCH_NAME,\n               T11.REGION,\n               T12.CITY_NAME,\n               decode(T3.RESIDENTIAL_STATUS,'R','Resident','N','Non-Resident') RESIDENTIAL_STATUS,\n               T1.SOURCE_DOCUMENT_TYPE AS SOURCE_CHANNEL,\n               decode(t2.gender,'M','Male','F','Female') gender,\n               PKG_EPF_CALCULATION.SF_GHS_AGE_CALCULATION(t1.age_rounding,\n                                                          to_date(sysdate),\n                                                          t2.dob) age,\n                                                         CASE WHEN NVL(T15.ALLOCATION_CHARGES,0) = 0 THEN\n                                                              T15.ADMIN_CHARGES\n                                                              WHEN NVL(T15.ADMIN_CHARGES,0) = 0 THEN\n                                                                T15.ALLOCATION_CHARGES\n                                                                END ADMIN_ALLOCATION_CHARGES,\n                                                           get_mbt_product_name(PD.PLAN_ID_FK,PD.PRODUCT_TYPE_ID_FK)  PRODUCT_NAME,\n               \n               (SELECT CD.SETUP_DESCRIPTION\n   FROM EPF_GEN_ST_SETUP_CATEGORY_DTL CD \n  WHERE CD.SETUP_DTL_ID_PK =T3.RESIDENT_COUNTRY_ID_FK \n) COUNTRY,\nnvl(T3.SOURCE_TYPE_NAME,'Head Office') SOURCE_TYPE_NAME,\n(SELECT C.SETUP_DESCRIPTION FROM EPF_GEN_ST_SETUP_CATEGORY_DTL C\nWHERE C.SETUP_DTL_ID_PK= T2.EMP_STATUS_ID_FK) EMP_STATUS,\nTRUNC(T2.ISSUE_DATE) ISSUE_DATE,\n\n\n(SELECT PB1.V_aGENT_CODE FROM VU_POLICY_AGENT_BRANCH PB1\nWHERE PB1.DOCUMENT_ID_PK = T1.DOCUMENT_ID_PK) AGENT_CODE,RT.LOADING_VALUE_ID\n\n               \n          FROM EPF_UW_DOCUMENT T1,\n               EPF_UW_EMPLOYEES T2,\n               EPF_GEN_ST_PARTICIPANT T3,\n               EPF_GEN_ST_PLAN T4,\n               EPF_GEN_ST_PRODCUT_DTL PD,\n               EPF_GEN_ST_SETUP_CATEGORY_DTL T5,\n               EPF_GEN_ST_OCCUPATION T6,\n               EPF_UW_RATING RT,\n               (SELECT T7.DOCUMENT_ID_FK,\n                       T8.EMPLOYEE_ID_FK,\n                       NVL(SUM(T8.TRANSACTION_AMOUNT),0) TOPUP\n                  FROM EPF_ACC_TRANSACTION T7, EPF_ACC_TRANSACTION_DTL T8\n                 WHERE 1 = 1\n                   AND T7.TRANSACTION_ID_PK = T8.TRANSACTION_ID_FK\n                   AND T7.TRANSACTION_FLAG IN ('R', 'RR')\n                   AND TRUNC(t7.approved_date) BETWEEN p_SDATE AND p_EDATE\n                   AND T8.TRANSACTION_TYPE_ID_FK IN (35)\n                 GROUP BY T7.DOCUMENT_ID_FK, T8.EMPLOYEE_ID_FK) Q1,\n               EPF_UW_AGENCY_BOOKING T9,\n               AMMM_AGENT_MASTER@PENTA_FTPROD T10,\n               VU_REGION_BRANCH_LOCATION_SORTING@PENTA_FTPROD T11,\n               EPF_GEN_ST_CITY T12,\n               -- EPF_UW_COMPLEMT_BENEFIT T13,\n              -- EPF_GEN_ST_COMPLEMENT_BENEFIT T14,\n               epf_uw_emp_category           t15,\n               epf_acc_transaction t16,\n               (select A.DOCUMENT_ID_PK,A.DOCUMENT_CODE,SUM(A.INDIVIDUAL_CONTRIBUTION) INDIVIDUAL_CONTRIBUTION \n               from BUSINESS_010226 A\n               WHERE A.TRANS_DATE BETWEEN p_SDATE AND p_EDATE\n               GROUP BY A.DOCUMENT_ID_PK,A.DOCUMENT_CODE\n               ) Q4\n\n         WHERE T1.DOCUMENT_ID_PK = T2.DOCUMENT_ID_FK\n           AND T1.PARTICIPANT_ID_FK = T3.PARTICIPANT_ID_PK(+)\n           AND T1.PLAN_ID_FK = T4.PLAN_ID_PK\n           AND T1.PRODUCT_TYPE_ID_FK = T5.SETUP_DTL_ID_PK\n           AND PD.PLAN_ID_FK = T4.PLAN_ID_PK(+)\n           AND PD.PRODUCT_TYPE_ID_FK = T1.PRODUCT_TYPE_ID_FK(+)\n           AND T3.OCCUPATION_ID_FK = T6.OCCUPATION_ID_PK(+)\n           AND T1.DOCUMENT_ID_PK = RT.DOCUMENT_ID_FK(+)\n           AND T1.PARTICIPANT_TYPE = 'I'\n           ----AND T2.EMP_STATUS_ID_FK = 39\n           --AND TRUNC(T2.UW_APPROVED_DATE) BETWEEN &SDATE AND &EDATE\n          -- AND TRUNC(t16.TRANSACTION_DATE) BETWEEN :SDATE AND :EDATE   ----changes\n         --  AND T1.DOCUMENT_CODE = 'MBT102023001786'\n           AND T1.COMPANYID_FK = p_COMPANY_CODE    \n           AND Q1.DOCUMENT_ID_FK(+) = T1.DOCUMENT_ID_PK\n           AND Q1.EMPLOYEE_ID_FK(+) = T2.EMPLOYEE_ID_PK\n           AND T9.DOCUMENT_ID_FK = T1.DOCUMENT_ID_PK\n           and t16.document_id_fk = t1.document_id_pk ---add\n           and Q4.DOCUMENT_CODE(+) = T1.DOCUMENT_CODE\n           --AND T1.DOCUMENT_CODE = 'LKP052025000024'\n           AND T9.BOOKING_ID_PK =\n               (SELECT MAX(BB.BOOKING_ID_PK)\n                  FROM EPF_UW_AGENCY_BOOKING BB\n                 WHERE BB.DOCUMENT_ID_FK = T1.DOCUMENT_ID_PK)\n           AND T9.AGENCY_ID_FK = T10.N_AGENT_NO\n           AND T10.V_BRANCH_CODE = T11.BRANCH_CODE(+)\n           AND T3.CITY_ID_FK = T12.CITY_ID_PK(+)\n           and t1.document_id_pk = t15.document_id_fk(+))\n GROUP BY DOCUMENT_CODE,\n          PARTICIPANT_NAME,\n          PROPOSER_NAME,\n          OCCUPATION,\n          DOB,\n          CNIC_NO,\n          SUBMISSION_DATE,\n          ISSUANCE_DATE,\n          PLAN_NAME,\n          PRODUCT_TYPE,\n          POLICY_STATUS,\n          CONTRIBUTION,\n          MODE_OF_PAYMENT,\n          SOURCE_CHANNEL,\n          DUE_AMOUNT,\n          PARTICIPANT_TYPE,\n          MEDICAL,\n          TOPUP,\n          BRANCH_NAME,\n          REGION,\n          CITY_NAME,\n          RESIDENTIAL_STATUS,\n          ADMIN_ALLOCATION_CHARGES,\n          PRODUCT_NAME,\n          gender,\n          age,/*\n          allocation_charges,\n          admin_charges,*/\n          COUNTRY,SOURCE_TYPE_NAME,DOCUMENT_ID_PK,EMP_STATUS,ISSUE_DATE,AGENT_CODE,\n--LOADING_VALUE_ID,\nEMPLOYEE_ID_PK, CATEGORY_ID_FK, RECEIVED_AMOUNT\n          \n                 \n       \n\n          \n       \n          \n\n    )\n\nWHERE\n1=1\nand NVL(RECEIVED_AMOUNT,0) <> 0;\n                \n            \n    END MBS_DOCUMENT_DETAIL;",
+      "db_links": [
+        "CONCEPT",
+        "DERIVED",
+        "LABEL",
+        "LOGIC",
+        "PENTA_FTPROD"
+      ],
+      "arguments": [
+        {
+          "argument_name": "P_SDATE",
+          "in_out": "IN",
+          "data_type": "DATE",
+          "position": 1
+        },
+        {
+          "argument_name": "P_EDATE",
+          "in_out": "IN",
+          "data_type": "DATE",
+          "position": 2
+        },
+        {
+          "argument_name": "P_COMPANY_CODE",
+          "in_out": "IN",
+          "data_type": "NUMBER",
+          "position": 3
+        },
+        {
+          "argument_name": "P_RESULT",
+          "in_out": "OUT",
+          "data_type": "REF CURSOR",
+          "position": 4
+        }
+      ],
+      "procedure_label": "MBS Business Logic Initiator",
+      "column_tags": [
+        {
+          "column": "BEGIN",
+          "tag_type": "label",
+          "labels": [
+            "MBS Business Logic Initiator"
+          ]
+        },
+        {
+          "column": "DOCUMENT_CODE",
+          "tag_type": "label",
+          "labels": [
+            "Policy Number",
+            "Policy",
+            "Document No",
+            "Document Code"
+          ]
+        },
+        {
+          "column": "PARTICIPANT_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Client Name",
+            "Participant",
+            "Customer",
+            "Policy Holder"
+          ]
+        },
+        {
+          "column": "PROPOSER_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Contract Initiator",
+            "Premium Payer",
+            "Information Provider"
+          ]
+        },
+        {
+          "column": "OCCUPATION",
+          "tag_type": "label",
+          "labels": [
+            "Profession",
+            "Job Category",
+            "Job Nature",
+            "Nature of Job"
+          ]
+        },
+        {
+          "column": "DOB",
+          "tag_type": "label",
+          "labels": [
+            "Date of Birth",
+            "Birth Date"
+          ]
+        },
+        {
+          "column": "CNIC_NO",
+          "tag_type": "label",
+          "labels": [
+            "CNIC Number",
+            "CNIC",
+            "National Identity Card Number",
+            "NIC Number",
+            "Identity Card No"
+          ]
+        },
+        {
+          "column": "SUBMISSION_DATE",
+          "tag_type": "label",
+          "labels": [
+            "Date of Submission",
+            "Submission Date",
+            "Document Submisiion Date"
+          ]
+        },
+        {
+          "column": "ISSUANCE_DATE",
+          "tag_type": "label",
+          "labels": [
+            "Policy Issuance Date",
+            "Policy Issued",
+            "Policy Started"
+          ]
+        },
+        {
+          "column": "PLAN_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Plan Name",
+            "Policy Plan",
+            "Plan Purchased"
+          ]
+        },
+        {
+          "column": "PRODUCT_TYPE",
+          "tag_type": "label",
+          "labels": [
+            "Plan Product",
+            "Product Name",
+            "Product Type",
+            "Product for Policy"
+          ]
+        },
+        {
+          "column": "POLICY_STATUS",
+          "tag_type": "label",
+          "labels": [
+            "Policy Status",
+            "Status of Policy",
+            "Status Hold"
+          ]
+        },
+        {
+          "column": "CONTRIBUTION",
+          "tag_type": "label",
+          "labels": [
+            "Contributiion",
+            "Contributed",
+            "Contribution Received"
+          ]
+        },
+        {
+          "column": "MODE_OF_PAYMENT",
+          "tag_type": "label",
+          "labels": [
+            "Payment Mode",
+            "Payment Mehtod",
+            "Paid Type"
+          ]
+        },
+        {
+          "column": "DUE_AMOUNT",
+          "tag_type": "label",
+          "labels": [
+            "Amount Receivable",
+            "Payment Due",
+            "Payment Awaited"
+          ]
+        },
+        {
+          "column": "PARTICIPANT_TYPE",
+          "tag_type": "label",
+          "labels": [
+            "Participant Type",
+            "Participant Category",
+            "Participant Guardian"
+          ]
+        },
+        {
+          "column": "MEDICAL",
+          "tag_type": "label",
+          "labels": [
+            "Medical"
+          ]
+        },
+        {
+          "column": "TOPUP",
+          "tag_type": "label",
+          "labels": [
+            "Policy Topup",
+            "Topup",
+            "Amount Added Topup"
+          ]
+        },
+        {
+          "column": "BRANCH_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Branch Name",
+            "Region Branch"
+          ]
+        },
+        {
+          "column": "REGION",
+          "tag_type": "label",
+          "labels": [
+            "Region",
+            "Policy Region Base"
+          ]
+        },
+        {
+          "column": "CITY_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Region City Name",
+            "Region City"
+          ]
+        },
+        {
+          "column": "RESIDENTIAL_STATUS",
+          "tag_type": "label",
+          "labels": [
+            "Residential Staus",
+            "Resident"
+          ]
+        },
+        {
+          "column": "SOURCE_CHANNEL",
+          "tag_type": "label",
+          "labels": [
+            "Source Channel",
+            "Policy Elevation",
+            "Source Get"
+          ]
+        },
+        {
+          "column": "GENDER",
+          "tag_type": "label",
+          "labels": [
+            "Participant Gender",
+            "Participant Sex"
+          ]
+        },
+        {
+          "column": "AGE",
+          "tag_type": "label",
+          "labels": [
+            "Participant Age"
+          ]
+        },
+        {
+          "column": "ADMIN_ALLOCATION_CHARGES",
+          "tag_type": "label",
+          "labels": [
+            "Admin Charges",
+            "Allocation Charges"
+          ]
+        },
+        {
+          "column": "PRODUCT_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Product Name",
+            "Policy Product Name"
+          ]
+        },
+        {
+          "column": "COUNTRY",
+          "tag_type": "label",
+          "labels": [
+            "Policy Holder Country",
+            "Country of Policy Holder"
+          ]
+        },
+        {
+          "column": "SOURCE_TYPE_NAME",
+          "tag_type": "label",
+          "labels": [
+            "Plicy Elevated Source"
+          ]
+        },
+        {
+          "column": "RECEIVED_AMOUNT",
+          "tag_type": "label",
+          "labels": [
+            "Amount Received in Finance",
+            "Finance Amount Received Policy"
+          ]
+        },
+        {
+          "column": "INVEST_STATUS",
+          "tag_type": "derived_concept",
+          "concept": "INVEST_STATUS",
+          "derived": true,
+          "logic": "Current if ISSUANCE_DATE falls within the requested date range (p_sdate/p_edate), else Previous"
+        }
+      ]
+    }
+  },
+  "package_level_dependencies": [
+    {
+      "owner": "FTPROD",
+      "name": "AMMM_AGENT_MASTER",
+      "type": "TABLE"
+    },
+    {
+      "owner": "FTPROD",
+      "name": "VU_REGION_BRANCH_LOCATION_SORTING",
+      "type": "VIEW"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "BUSINESS_010226",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_ACC_TRANSACTION",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_ACC_TRANSACTION_DTL",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_CLM_DETAIL",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_CLM_MASTER",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_CITY",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_OCCUPATION",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_PARTICIPANT",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_PLAN",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_PRODCUT_DTL",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_GEN_ST_SETUP_CATEGORY_DTL",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_AGENCY_BOOKING",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_DOCUMENT",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_DOC_REQUIREMENT",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_EMPLOYEES",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_EMP_CATEGORY",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "EPF_UW_RATING",
+      "type": "TABLE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "GET_MBT_PRODUCT_NAME",
+      "type": "FUNCTION"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "PKG_BIEL_MBS",
+      "type": "PACKAGE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "PKG_EPF_CALCULATION",
+      "type": "PACKAGE"
+    },
+    {
+      "owner": "PQTEPF",
+      "name": "VU_POLICY_AGENT_BRANCH",
+      "type": "VIEW"
+    },
+    {
+      "owner": "SYS",
+      "name": "STANDARD",
+      "type": "PACKAGE"
+    }
+  ],
+  "dependency_table_info": {
+    "FTPROD.AMMM_AGENT_MASTER": {
+      "owner": "FTPROD",
+      "table_name": "AMMM_AGENT_MASTER",
+      "type": "TABLE",
+      "column_count": 0,
+      "columns": []
+    },
+    "FTPROD.VU_REGION_BRANCH_LOCATION_SORTING": {
+      "owner": "FTPROD",
+      "table_name": "VU_REGION_BRANCH_LOCATION_SORTING",
+      "type": "VIEW",
+      "column_count": 0,
+      "columns": []
+    },
+    "PQTEPF.BUSINESS_010226": {
+      "owner": "PQTEPF",
+      "table_name": "BUSINESS_010226",
+      "type": "TABLE",
+      "column_count": 12,
+      "columns": [
+        {
+          "column_name": "DOCUMENT_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 35,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "INDIVIDUAL_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "TRANS_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "REGULAR_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "RENEWAL_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "TOPUP_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "AGENT_TOPUP",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "CUSTOMER_TOPUP",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "CONTRIBUTION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "CORPORATE_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "UW_APPROVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        }
+      ]
+    },
+    "PQTEPF.EPF_ACC_TRANSACTION": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_ACC_TRANSACTION",
+      "type": "TABLE",
+      "column_count": 41,
+      "columns": [
+        {
+          "column_name": "TRANSACTION_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "TRANSACTION_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "TRANSACTION_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "APPROVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "APPROVED_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "TRANSACTION_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 2,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "ALTERATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "PRICING_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "CANCEL_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "CANCEL_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "MIGRATION_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "COMPANYID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "PR_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "MANUAL_PR_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "POST_UW_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "POST_UW_USER_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "CONTRIBUTION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "DATA_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "REF_TRANSACTION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "INSTANT_WITHDRAWAL_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "DWP",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "HOLD_DOC_STATUS",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "RELEASE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "REQ_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "IT_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 400,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        },
+        {
+          "column_name": "TRANSACTION_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "APPROVED_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "CORP_CONT_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "FUND_CONVERSION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "WITHDRAWAL_BATCH_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "REASON_WITHDRAWAL",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "TOPUP_CONTRIBUTION_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "WITHDRAWAL_REASON_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "FINAL_RECEIPT_EMAIL_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "EP_PAYMENT_TRANSACTION_ID",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "FUND_STRATEGY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 41
+        }
+      ]
+    },
+    "PQTEPF.EPF_ACC_TRANSACTION_DTL": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_ACC_TRANSACTION_DTL",
+      "type": "TABLE",
+      "column_count": 29,
+      "columns": [
+        {
+          "column_name": "TRANSACTION_DETAIL_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "TRANSACTION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "EMPLOYEE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "TRANSACTION_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "CHEQUE_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 40,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "CHEQUE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "SEQ_NO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "FUND_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "TRANSACTION_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "TRANSACTION_ERROR",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "PRICING_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "ZAKAT_DECLARATION",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "REF_TRANSACTION_DETAIL_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "PAYMENT_MODE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "PR_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "MANUAL_PR_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "BAL_ADMIN_CHARGES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "VOUCHER_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 11,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "IBAN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "ACCOUNT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "MBL_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "TRANSACTION_TYPE_ID_FK_BK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "ACCOUNT_TITLE",
+          "data_type": "VARCHAR2",
+          "data_length": 550,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "TRANSACTION_AMOUNT_IT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "ALLOCATION_CHARGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "TAX_ABLEAMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "TAX_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "TAX_RATE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "ATL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        }
+      ]
+    },
+    "PQTEPF.EPF_CLM_DETAIL": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_CLM_DETAIL",
+      "type": "TABLE",
+      "column_count": 10,
+      "columns": [
+        {
+          "column_name": "CLM_DETAIL_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "CLAIM_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "EMPLOYEE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "PAID_TO_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "CASH_VALUES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "UPDATE_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "UPDATE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        }
+      ]
+    },
+    "PQTEPF.EPF_CLM_MASTER": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_CLM_MASTER",
+      "type": "TABLE",
+      "column_count": 22,
+      "columns": [
+        {
+          "column_name": "CLAIM_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "CLAIM_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "NIC_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 13,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "CITY_ID_FK",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "EVENT_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "INTIMATION_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "RECEIVE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "DECISION_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "CLAIM_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "APPROVE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "APPROVE_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "CANCEL_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "CANCEL_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "LAST_WORKING_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "CLAIM_CAUSE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "UPDATE_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "UPDATE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "PARTICIPANT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "CLM_PRICING_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_CITY": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_CITY",
+      "type": "TABLE",
+      "column_count": 7,
+      "columns": [
+        {
+          "column_name": "CITY_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "CITY_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 2
+        },
+        {
+          "column_name": "REGION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "COUNTRY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_OCCUPATION": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_OCCUPATION",
+      "type": "TABLE",
+      "column_count": 10,
+      "columns": [
+        {
+          "column_name": "OCCUPATION_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "OCCUPATION_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "OCCUPATION_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "CATEGORY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "OCCUPATION_NAME_SECP",
+          "data_type": "VARCHAR2",
+          "data_length": 300,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "OCCUPATION_GROUP",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_PARTICIPANT": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_PARTICIPANT",
+      "type": "TABLE",
+      "column_count": 133,
+      "columns": [
+        {
+          "column_name": "PARTICIPANT_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "PARTICIPANT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "CONTACT_PERSON",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "REGION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "CITY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "DISTRICT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "ZONE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "PHONE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "FAX",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "MOBILE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "EMAIL",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "URL",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "OCCUPATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "TAX_EXEMPT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "REGISTRATION_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "ZIP_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "PO_BOX_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "NTN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "NIC",
+          "data_type": "VARCHAR2",
+          "data_length": 60,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "NIC_ISSUE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "NIC_EXPIRE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "ATL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "TAX_DEDUCTED",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "BLACK_LIST",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 28
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 29
+        },
+        {
+          "column_name": "SHORT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "MIGRATION_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "PARENT_PARTICIPANT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "GENDER",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "PERMANET_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "BANK_BR_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "BANK_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "IBAN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "ACC_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "ZAKAT_DEDUCTION",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "FILER_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "RESIDENTIAL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 41
+        },
+        {
+          "column_name": "DOP",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 42
+        },
+        {
+          "column_name": "DOB",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 43
+        },
+        {
+          "column_name": "DUAL_NATIONALITY",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 44
+        },
+        {
+          "column_name": "NATIONALITY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 45
+        },
+        {
+          "column_name": "RELIGION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 46
+        },
+        {
+          "column_name": "MARITAL_STATUS",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 47
+        },
+        {
+          "column_name": "MOTHER_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 48
+        },
+        {
+          "column_name": "FATHER_HUSBAND_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 49
+        },
+        {
+          "column_name": "TITLE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 50
+        },
+        {
+          "column_name": "ACCOUNT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 51
+        },
+        {
+          "column_name": "PARTICIPANT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 52
+        },
+        {
+          "column_name": "GH_DOC_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 53
+        },
+        {
+          "column_name": "CROSS_ADDRESS_TYPE",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 54
+        },
+        {
+          "column_name": "ADDRESS_2",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 55
+        },
+        {
+          "column_name": "ADDRESS_3",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 56
+        },
+        {
+          "column_name": "COUNTRY_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 57
+        },
+        {
+          "column_name": "COMPANYID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 58
+        },
+        {
+          "column_name": "LIFE_COVERAGE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 59
+        },
+        {
+          "column_name": "CUSTOMER_PORTAL_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 60
+        },
+        {
+          "column_name": "SOURCE_TYPE_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 61
+        },
+        {
+          "column_name": "CONVERSION_CUSTOMER",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 62
+        },
+        {
+          "column_name": "RESIDENT_COUNTRY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 63
+        },
+        {
+          "column_name": "AGENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 64
+        },
+        {
+          "column_name": "SHARE_COMM_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 65
+        },
+        {
+          "column_name": "PORTAL_ACCESS",
+          "data_type": "VARCHAR2",
+          "data_length": 2,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 66
+        },
+        {
+          "column_name": "CP_OCC_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 67
+        },
+        {
+          "column_name": "CASH_DIVIDEND",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 68
+        },
+        {
+          "column_name": "STOCK_DIVIDEND",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 69
+        },
+        {
+          "column_name": "ACCOUNT_OPERATE_INST",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 70
+        },
+        {
+          "column_name": "SOURCE_INCOME_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 71
+        },
+        {
+          "column_name": "SOURCE_WEALTH_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 72
+        },
+        {
+          "column_name": "NAME_EMPLOY_BUSINESS",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 73
+        },
+        {
+          "column_name": "DESIGNATION_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 74
+        },
+        {
+          "column_name": "EDUCATION_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 75
+        },
+        {
+          "column_name": "ANNUAL_INCOME_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 76
+        },
+        {
+          "column_name": "CONTACT_PERSON_EMAIL",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 77
+        },
+        {
+          "column_name": "CONTACT_PERSON_PHONE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 78
+        },
+        {
+          "column_name": "CONTACT_PERSON_MOBILE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 79
+        },
+        {
+          "column_name": "GEO_DOMESTIC",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 80
+        },
+        {
+          "column_name": "GEO_INTERNATIONAL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 81
+        },
+        {
+          "column_name": "TYPE_COUNTER_DOMESTIC",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 82
+        },
+        {
+          "column_name": "TYPE_COUNTER_INTERNATIONAL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 83
+        },
+        {
+          "column_name": "CHANNEL_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 84
+        },
+        {
+          "column_name": "ITMINDS_FOLIO_NO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 85
+        },
+        {
+          "column_name": "ZAKAT_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 86
+        },
+        {
+          "column_name": "ITMINDS_DATA_IDENTIFIER",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 87
+        },
+        {
+          "column_name": "COUNTRY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 88
+        },
+        {
+          "column_name": "PROVINCE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 89
+        },
+        {
+          "column_name": "PASSPORT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 90
+        },
+        {
+          "column_name": "PASSPORT_ISSUE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 91
+        },
+        {
+          "column_name": "PASSPORT_EXPIRY_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 92
+        },
+        {
+          "column_name": "ALTERATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 93
+        },
+        {
+          "column_name": "AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 94
+        },
+        {
+          "column_name": "SUM_COVERED",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 95
+        },
+        {
+          "column_name": "VERIFY_ACCOUNT_TITLE",
+          "data_type": "VARCHAR2",
+          "data_length": 550,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 96
+        },
+        {
+          "column_name": "IBAN_VERIFY_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 97
+        },
+        {
+          "column_name": "MOTHER_CNIC",
+          "data_type": "VARCHAR2",
+          "data_length": 60,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 98
+        },
+        {
+          "column_name": "FATHER_CNIC",
+          "data_type": "VARCHAR2",
+          "data_length": 60,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 99
+        },
+        {
+          "column_name": "SMOKER_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 100
+        },
+        {
+          "column_name": "UW_APPROVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 101
+        },
+        {
+          "column_name": "UW_STATUS_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 102
+        },
+        {
+          "column_name": "CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 103
+        },
+        {
+          "column_name": "SUBSIDIARY_COMPANY",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 104
+        },
+        {
+          "column_name": "EPMD",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 105
+        },
+        {
+          "column_name": "STOP_EPMD",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 106
+        },
+        {
+          "column_name": "PROFIT_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 107
+        },
+        {
+          "column_name": "PROFIT_FIXED_AMT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 108
+        },
+        {
+          "column_name": "ALTERATION_FLAG",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 109
+        },
+        {
+          "column_name": "IBAN_MANUAL_VERIFY_FLAG",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 110
+        },
+        {
+          "column_name": "ZAKAT_DECLARATION_MANUAL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 111
+        },
+        {
+          "column_name": "CGT",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 112
+        },
+        {
+          "column_name": "WHT",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 113
+        },
+        {
+          "column_name": "TRANSFERRED_FOLIO",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 114
+        },
+        {
+          "column_name": "PLACE_OF_STATEMENT",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 115
+        },
+        {
+          "column_name": "FATHER_HUSBAND_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 116
+        },
+        {
+          "column_name": "SERVICE_LENGTH",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 117
+        },
+        {
+          "column_name": "NRP_COUNTRY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 118
+        },
+        {
+          "column_name": "LIFE_TIME_EXPIRY",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 119
+        },
+        {
+          "column_name": "OTHER_PROFESSION",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 120
+        },
+        {
+          "column_name": "OTHER_PLACE_BIRTH",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 121
+        },
+        {
+          "column_name": "STICK_PER_DAY",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 122
+        },
+        {
+          "column_name": "SMOKER_CHECK",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 123
+        },
+        {
+          "column_name": "WEIGHT",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 124
+        },
+        {
+          "column_name": "HEIGHT",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 125
+        },
+        {
+          "column_name": "POROUS_BORDER",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 126
+        },
+        {
+          "column_name": "ANNUAL_INCOME",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 127
+        },
+        {
+          "column_name": "EMPLOYER_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 128
+        },
+        {
+          "column_name": "POC_NUMBER",
+          "data_type": "VARCHAR2",
+          "data_length": 25,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 129
+        },
+        {
+          "column_name": "ATL_STATUS_UPDATE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 130
+        },
+        {
+          "column_name": "TIN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 131
+        },
+        {
+          "column_name": "IQAMA_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 132
+        },
+        {
+          "column_name": "RESIDENT_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 133
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_PLAN": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_PLAN",
+      "type": "TABLE",
+      "column_count": 43,
+      "columns": [
+        {
+          "column_name": "PLAN_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "PLAN_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "PLAN_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "SHORT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 3,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 4
+        },
+        {
+          "column_name": "MIN_POL_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "MAX_POL_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "MIN_PAY_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "MAX_PAY_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "MIN_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "MAX_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "MIN_MATURE_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "MAX_MATURE_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "MIN_SC",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "MAX_SC",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "MIN_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "MAX_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "PYMT_CHECK_LEVEL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "ALLOCATION_CHARGES",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "ADC_MIN_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "ADC_MAX_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "PLAN_CALC_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 2,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "MIN_RENEWAL",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "MAX_RENEWAL",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "DSS_PORTAL",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "ONBOARDING_PORTAL",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "PLAN_VERSION",
+          "data_type": "VARCHAR2",
+          "data_length": 5,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "DISPLAY_PLAN_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        },
+        {
+          "column_name": "AGENCY_STRUCTURE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "AGENCY_HIERARCHY_LEVEL",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "ALTERATION_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "ONBOARDING_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "DISPLAY_PLAN_NAME_11",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "MODE_OF_PAYMENT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "DISPLAY_PLAN_URDU",
+          "data_type": "NVARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "INSTANT_WITHDRAWAL",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "FUND_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "COVER_MULTIPLE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "ACTIVE_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "MONTHLY_PROFIT_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 41
+        },
+        {
+          "column_name": "DISPLAY_PLAN_URDU_HTML",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 42
+        },
+        {
+          "column_name": "POS_PORTAL_ACCESS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 43
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_PRODCUT_DTL": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_PRODCUT_DTL",
+      "type": "TABLE",
+      "column_count": 13,
+      "columns": [
+        {
+          "column_name": "PRODCUT_DTL_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "PLAN_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "PRODUCT_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "PRODUCT_NATURE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "CALCULATION_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "PORTAL_ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "PLAN_GROUP_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 7
+        },
+        {
+          "column_name": "PLAN_DESC",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "CALCULATOR_PORTAL_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "SORT_BY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "PRODUCT_CHANGE_ALLOWED",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "PRODCUT__LOCK",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "FUND_TRANSFER_ALLOWED",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        }
+      ]
+    },
+    "PQTEPF.EPF_GEN_ST_SETUP_CATEGORY_DTL": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_GEN_ST_SETUP_CATEGORY_DTL",
+      "type": "TABLE",
+      "column_count": 22,
+      "columns": [
+        {
+          "column_name": "SETUP_DTL_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "SETUP_DESCRIPTION",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "SETUP_CATEGORY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "ACTIVE",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "SETUP_DTL_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "SORT_BY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "SHORT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "RELATION_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "REPORT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "ALTERATION_NATURE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "SETUP_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "DESCRIPTION_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "PORTAL_ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "PROPOSER_ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "BANCA_MAPPING_ID",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "IT_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "MAKER_CHECKER",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "DISPLAY_URDU",
+          "data_type": "NVARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "REF_SETUP_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "CALC_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_AGENCY_BOOKING": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_AGENCY_BOOKING",
+      "type": "TABLE",
+      "column_count": 26,
+      "columns": [
+        {
+          "column_name": "BOOKING_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "AGENCY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "DEFAULT_COMM_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "COMMISSION_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "PROD_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "COMMISSION_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "COMMISSION_RATE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "EFFECTIVE_DT",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "MANUAL_CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "V_RANK_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "CURRENT_RANK",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "MANUAL_COMM",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "ORIG_COMM_RATE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "ORIG_PROD_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "DATA_FLAG",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "SHARE_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "AMC_HO",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "PQFT_HO",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "REFFERAL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "EFFECTIVE_DT_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "COMM_GEN_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_DOCUMENT": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_DOCUMENT",
+      "type": "TABLE",
+      "column_count": 74,
+      "columns": [
+        {
+          "column_name": "DOCUMENT_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 35,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "DOCUMENT_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "PARTICIPANT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "VALIDITY_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "PERIOD_FROM",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "PERIOD_TO",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "APPROVE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "APPROVE_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "MAXIMUM_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "MINIMUM_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "CANCEL_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "CANCEL_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "CHANNEL_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "FILE_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "BRANCH_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "REGION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 1000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "AGE_ROUNDING",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "ALTERATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "ALTERATION_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "PLAN_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "MIGRATION_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "MODE_OF_PAYMENT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "BENEFIT_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "CONTRIBUTION_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "WAKALA_FEE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        },
+        {
+          "column_name": "GROUP_DOCUMENT_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 35,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "GROUP_DOCUMENT_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "PARTICIPANT_TYPE",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "PAYING_TERM",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "COMPANYID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "HOLD_DOCS",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "HOLD_DOCS_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "PORTAL_DOCUMENT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "HOLD_DOCS_EMAIL",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "MOVE_TO_POLICY",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "SOURCE_DOCUMENT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "TERMS_OF_ACCEPTANCE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 41
+        },
+        {
+          "column_name": "PRODUCT_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 42
+        },
+        {
+          "column_name": "CANCEL_VOUCHER_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 25,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 43
+        },
+        {
+          "column_name": "PARENT_PARTICIPANT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 44
+        },
+        {
+          "column_name": "PARTICIPANT_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 45
+        },
+        {
+          "column_name": "PROPOSER_RELATION_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 46
+        },
+        {
+          "column_name": "REFERRAL_AGENCY_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 47
+        },
+        {
+          "column_name": "REFERRAL_AGENCY_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 48
+        },
+        {
+          "column_name": "PORTAL_ACCESS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 49
+        },
+        {
+          "column_name": "PARTICIPANT_COMM_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 50
+        },
+        {
+          "column_name": "CORP_PARTICIPANT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 51
+        },
+        {
+          "column_name": "DOCUMENT_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 52
+        },
+        {
+          "column_name": "VALIDITY_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 53
+        },
+        {
+          "column_name": "PERIOD_FROM_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 54
+        },
+        {
+          "column_name": "PERIOD_TO_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 55
+        },
+        {
+          "column_name": "APPROVE_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 56
+        },
+        {
+          "column_name": "CANCEL_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 57
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 58
+        },
+        {
+          "column_name": "DOCUMENT_CODE_BK",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 59
+        },
+        {
+          "column_name": "REGISTRATION_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 60
+        },
+        {
+          "column_name": "ANF_OPTOIN_ID_FK",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 61
+        },
+        {
+          "column_name": "INDEXATION_OPTION",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 62
+        },
+        {
+          "column_name": "POLICY_BANK_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 63
+        },
+        {
+          "column_name": "POLICY_BANK_BRANCH_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 64
+        },
+        {
+          "column_name": "ONBOARDING_REF_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 65
+        },
+        {
+          "column_name": "RELEASED",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 66
+        },
+        {
+          "column_name": "RELEASED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 67
+        },
+        {
+          "column_name": "RELEASED_USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 68
+        },
+        {
+          "column_name": "RECEIPT_TRANSFER_DOCUMENT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 69
+        },
+        {
+          "column_name": "RECEIPT_TRANSFER_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 1500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 70
+        },
+        {
+          "column_name": "RECEIPT_TRANSFER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 71
+        },
+        {
+          "column_name": "UPDATED_BY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 72
+        },
+        {
+          "column_name": "UPDATED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 73
+        },
+        {
+          "column_name": "IT_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 1000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 74
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_DOC_REQUIREMENT": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_DOC_REQUIREMENT",
+      "type": "TABLE",
+      "column_count": 25,
+      "columns": [
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "EMPLOYEE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "DOC_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 16,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "REASON_DESC",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "REC_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "REQUEST_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "RECEIVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "USER_NOTES",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "HOLD_DOC",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "HOLD_DOC_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "REC_STATUS_BKP",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "ATTACHMENT_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "CONTENT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "FILE_PATH",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "FILE_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "EMAIL_FLAG",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "APEX_UPLOAD",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "APEX_MIME_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "APEX_FILE_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 250,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "APEX_UPLOAD_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "REQUEST_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "RECEIVED_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_EMPLOYEES": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_EMPLOYEES",
+      "type": "TABLE",
+      "column_count": 134,
+      "columns": [
+        {
+          "column_name": "EMPLOYEE_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "SEQUENCE_NO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "CERTIFICATE_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "EMP_TITLE",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "EMPLOYEE_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "EMPLOYEE_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "CNIC_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "DOB",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "GENDER",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "MARITAL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "EFFECTIVE_DT",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "EMAIL_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "MOBILE_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "PHONE_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "DATE_OF_JOIN",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "ACCOUNT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "BANK_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "BRANCH_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "EMP_STATUS_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "UPLOAD_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "ALTERATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "DELETE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "FATHER_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "MOTHER_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "FATHER_CNIC",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        },
+        {
+          "column_name": "MOTHER_CNIC",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "SUM_COVERED",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "BENEFITS_PAYMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "EMP_ACTIVE",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "EMP_CATEGORY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "ZAKAT_DECLARATION",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "ATL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "EMP_DESIGNATION",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "RELIGION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "SMOKER_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "CNIC_ISSUE_DT",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "CNIC_EXPIRE_DT",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 41
+        },
+        {
+          "column_name": "IBAN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 42
+        },
+        {
+          "column_name": "CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 43
+        },
+        {
+          "column_name": "PENTA_POL_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 44
+        },
+        {
+          "column_name": "FUND_TYPE_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 45
+        },
+        {
+          "column_name": "EMP_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 46
+        },
+        {
+          "column_name": "OCCUPATION_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 47
+        },
+        {
+          "column_name": "CITY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 48
+        },
+        {
+          "column_name": "MIGRATION_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 49
+        },
+        {
+          "column_name": "UW_STATUS_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 50
+        },
+        {
+          "column_name": "ISSUE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 51
+        },
+        {
+          "column_name": "UW_APPROVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 52
+        },
+        {
+          "column_name": "MEMBER_RISK_ASSESSMENT_FLAG",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 53
+        },
+        {
+          "column_name": "MODE_OF_PAYMENT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 54
+        },
+        {
+          "column_name": "SUBSIDIARY_COMPANY",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 55
+        },
+        {
+          "column_name": "PASSWORD",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 56
+        },
+        {
+          "column_name": "FORM_ROLE",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 57
+        },
+        {
+          "column_name": "USER_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 58
+        },
+        {
+          "column_name": "LOGIN_ATTEMPT",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 59
+        },
+        {
+          "column_name": "CHANGE_PASSWORD",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 60
+        },
+        {
+          "column_name": "WITHDRAWAL_ID_FK",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 61
+        },
+        {
+          "column_name": "EMP_COUNTRY",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 62
+        },
+        {
+          "column_name": "ACCUSED_PERSON",
+          "data_type": "VARCHAR2",
+          "data_length": 5,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 63
+        },
+        {
+          "column_name": "PEP",
+          "data_type": "VARCHAR2",
+          "data_length": 5,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 64
+        },
+        {
+          "column_name": "PROFIT_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 65
+        },
+        {
+          "column_name": "PROFIT_FIXED_AMT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 66
+        },
+        {
+          "column_name": "RESIDENTIAL_STATUS",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 67
+        },
+        {
+          "column_name": "REGISTRATION_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 68
+        },
+        {
+          "column_name": "EPMD",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 69
+        },
+        {
+          "column_name": "STOP_EPMD",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 70
+        },
+        {
+          "column_name": "DUE_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 71
+        },
+        {
+          "column_name": "NTN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 72
+        },
+        {
+          "column_name": "BANK_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 73
+        },
+        {
+          "column_name": "FINANCIAL_LOCK_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 74
+        },
+        {
+          "column_name": "VERIFY_ACCOUNT_TITLE",
+          "data_type": "VARCHAR2",
+          "data_length": 550,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 75
+        },
+        {
+          "column_name": "IBAN_VERIFY_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 76
+        },
+        {
+          "column_name": "INSTANT_WITHDRAWAL_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 77
+        },
+        {
+          "column_name": "IT_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 78
+        },
+        {
+          "column_name": "PORTAL_ACCESS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 79
+        },
+        {
+          "column_name": "REMARKS_DTL",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 80
+        },
+        {
+          "column_name": "PERSON_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 81
+        },
+        {
+          "column_name": "PERSON_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 82
+        },
+        {
+          "column_name": "PERSON_DOB",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 83
+        },
+        {
+          "column_name": "EFFECTIVE_DT_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 84
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 85
+        },
+        {
+          "column_name": "ISSUE_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 86
+        },
+        {
+          "column_name": "UW_APPROVED_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 87
+        },
+        {
+          "column_name": "ANNUITY_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 88
+        },
+        {
+          "column_name": "NO_OF_PAYMENT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 89
+        },
+        {
+          "column_name": "FUTURE_VALUES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 90
+        },
+        {
+          "column_name": "NET_GAIN",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 91
+        },
+        {
+          "column_name": "MONTHLY_ANNUITY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 92
+        },
+        {
+          "column_name": "ANNUITY_PLAN_TYPE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 93
+        },
+        {
+          "column_name": "FACTOR_RATE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 94
+        },
+        {
+          "column_name": "INDEXATION_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 95
+        },
+        {
+          "column_name": "ZAKAT_DECLARATION_MANUAL",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 96
+        },
+        {
+          "column_name": "IBAN_MANUAL_VERIFY_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 97
+        },
+        {
+          "column_name": "ZAKAT_DECLARATION_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 98
+        },
+        {
+          "column_name": "CRM_LEAD_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 99
+        },
+        {
+          "column_name": "DISCARD_VALIDATION_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 100
+        },
+        {
+          "column_name": "SOURCE_OF_INCOME_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 101
+        },
+        {
+          "column_name": "MONTHLY_INCOME",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 102
+        },
+        {
+          "column_name": "RETIREMENT_AGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 103
+        },
+        {
+          "column_name": "HOLD_SURRENDER_VALUE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 104
+        },
+        {
+          "column_name": "PRESENT_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 1000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 105
+        },
+        {
+          "column_name": "BASIC_PAY_SCALE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 106
+        },
+        {
+          "column_name": "DEPARTMENT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 107
+        },
+        {
+          "column_name": "BANK_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 108
+        },
+        {
+          "column_name": "CNIC_VALIDATION_DISCARD",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 109
+        },
+        {
+          "column_name": "VALIDATION_DISCARD_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 110
+        },
+        {
+          "column_name": "CONTRIBUTION_PCT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 111
+        },
+        {
+          "column_name": "MOBILE_NO_BK",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 112
+        },
+        {
+          "column_name": "WITHDRAWAL_LOCK",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 113
+        },
+        {
+          "column_name": "LKP_PAYMENT",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 114
+        },
+        {
+          "column_name": "EMPLOYEE_TRANSFER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 115
+        },
+        {
+          "column_name": "POC_NUMBER",
+          "data_type": "VARCHAR2",
+          "data_length": 25,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 116
+        },
+        {
+          "column_name": "GOAL_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 117
+        },
+        {
+          "column_name": "GOAL_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 118
+        },
+        {
+          "column_name": "UPDATED_BY",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 119
+        },
+        {
+          "column_name": "UPDATED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 120
+        },
+        {
+          "column_name": "PQFS_TOPUP_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 121
+        },
+        {
+          "column_name": "PQFS_WITHDRAWAL_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 122
+        },
+        {
+          "column_name": "MBL_VIRTUAL_ACCOUNT",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 123
+        },
+        {
+          "column_name": "ATL_STATUS_UPDATE_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 124
+        },
+        {
+          "column_name": "ALTERATION_LOCK",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 125
+        },
+        {
+          "column_name": "ANNUAL_INCOME",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 126
+        },
+        {
+          "column_name": "MONTHLY_TOPUP_CALC",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 127
+        },
+        {
+          "column_name": "TIN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 128
+        },
+        {
+          "column_name": "IQAMA_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 129
+        },
+        {
+          "column_name": "RESIDENT_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 2000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 130
+        },
+        {
+          "column_name": "PAID_UP_FLAG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 131
+        },
+        {
+          "column_name": "PAID_UP_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 132
+        },
+        {
+          "column_name": "PASSPORT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 133
+        },
+        {
+          "column_name": "EMP_STATUS_UPDATE_DT",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 134
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_EMP_CATEGORY": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_EMP_CATEGORY",
+      "type": "TABLE",
+      "column_count": 21,
+      "columns": [
+        {
+          "column_name": "EMP_CATEGORY_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "CATG_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "CATG_DESC",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "ALLOCATION_CHARGES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "TAKAFUL_CHARGES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "ADMIN_CHARGES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "BACKEND_LOAD",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "WITHDRAW_LIMIT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "MORTALITY_CHG",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "MIGRATION_YN",
+          "data_type": "CHAR",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "MIN_COVERAGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        },
+        {
+          "column_name": "MAX_COVERAGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 15
+        },
+        {
+          "column_name": "LIFE_COVERAGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "PROD_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "WITHDRAW_CHARGES",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "IT_REMARKS",
+          "data_type": "VARCHAR2",
+          "data_length": 1000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "FIX_CHARGE",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "ENTER_DATE_BKUP",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        }
+      ]
+    },
+    "PQTEPF.EPF_UW_RATING": {
+      "owner": "PQTEPF",
+      "table_name": "EPF_UW_RATING",
+      "type": "TABLE",
+      "column_count": 14,
+      "columns": [
+        {
+          "column_name": "RATING_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "PRODUCT_BENEFITS_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "BENEFIT_VALUES",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "LOADING_REASON_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "LOADING_TYPE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "LOADING_VALUE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "TEMPORARY_PERMANENT_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "LOADING_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "TILL_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "RETAKAFUL_RETENTION",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "TERMS_OF_ACCEPTANCE_ID",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 12
+        },
+        {
+          "column_name": "USER_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 14
+        }
+      ]
+    },
+    "PQTEPF.VU_POLICY_AGENT_BRANCH": {
+      "owner": "PQTEPF",
+      "table_name": "VU_POLICY_AGENT_BRANCH",
+      "type": "VIEW",
+      "column_count": 51,
+      "columns": [
+        {
+          "column_name": "DOCUMENT_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 1
+        },
+        {
+          "column_name": "DOCUMENT_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 35,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 2
+        },
+        {
+          "column_name": "EMPLOYEE_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 350,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 3
+        },
+        {
+          "column_name": "CNIC_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 4
+        },
+        {
+          "column_name": "IBAN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 5
+        },
+        {
+          "column_name": "ACCOUNT_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 6
+        },
+        {
+          "column_name": "PARTICIPANT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 7
+        },
+        {
+          "column_name": "PARTICIPANT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 8
+        },
+        {
+          "column_name": "V_BRANCH_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 50,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 9
+        },
+        {
+          "column_name": "V_BRANCH_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 10
+        },
+        {
+          "column_name": "REGION_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 11
+        },
+        {
+          "column_name": "REGION_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 12
+        },
+        {
+          "column_name": "V_AGENT_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 30,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 13
+        },
+        {
+          "column_name": "N_AGENT_NO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 14
+        },
+        {
+          "column_name": "EMPLOYEE_ID_PK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "N",
+          "position": 15
+        },
+        {
+          "column_name": "AGENT_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 16
+        },
+        {
+          "column_name": "AGENT_EMAIL_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 17
+        },
+        {
+          "column_name": "V_RANK_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 10,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 18
+        },
+        {
+          "column_name": "RANK_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 19
+        },
+        {
+          "column_name": "VALIDITY_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 20
+        },
+        {
+          "column_name": "SOURCE_DOCUMENT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 21
+        },
+        {
+          "column_name": "PERIOD_TO",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 22
+        },
+        {
+          "column_name": "PERIOD_FROM",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 23
+        },
+        {
+          "column_name": "POLICY_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 24
+        },
+        {
+          "column_name": "ENTER_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 25
+        },
+        {
+          "column_name": "UW_APPROVED_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 26
+        },
+        {
+          "column_name": "EMP_STATUS_ID_FK",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 27
+        },
+        {
+          "column_name": "REGISTRATION_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 28
+        },
+        {
+          "column_name": "PROFIT_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 29
+        },
+        {
+          "column_name": "PROFIT_FIXED_AMT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 30
+        },
+        {
+          "column_name": "TRANSACTION_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 31
+        },
+        {
+          "column_name": "TOPUP",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 32
+        },
+        {
+          "column_name": "PRODUCT_NATURE",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 33
+        },
+        {
+          "column_name": "CALCULATION_TYPE",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 34
+        },
+        {
+          "column_name": "SUM_COVERED",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 35
+        },
+        {
+          "column_name": "CONTRIBUTION",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 36
+        },
+        {
+          "column_name": "IBAN_VERIFY",
+          "data_type": "VARCHAR2",
+          "data_length": 11,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 37
+        },
+        {
+          "column_name": "CANCEL_DATE",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 38
+        },
+        {
+          "column_name": "MANAGER_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 39
+        },
+        {
+          "column_name": "MANAGER_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 4000,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 40
+        },
+        {
+          "column_name": "N_CHANNEL_NO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": 10,
+          "data_scale": 0,
+          "nullable": "Y",
+          "position": 41
+        },
+        {
+          "column_name": "N_CURRENTLY_REPORTING_TO",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 42
+        },
+        {
+          "column_name": "AREA_CODE",
+          "data_type": "VARCHAR2",
+          "data_length": 20,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 43
+        },
+        {
+          "column_name": "AREA_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 200,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 44
+        },
+        {
+          "column_name": "PLAN_GROUP_NAME",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 45
+        },
+        {
+          "column_name": "DUE_AMOUNT",
+          "data_type": "NUMBER",
+          "data_length": 22,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 46
+        },
+        {
+          "column_name": "EMAIL_ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 150,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 47
+        },
+        {
+          "column_name": "RESIDENTIAL_STATUS",
+          "data_type": "VARCHAR2",
+          "data_length": 1,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 48
+        },
+        {
+          "column_name": "NTN_NO",
+          "data_type": "VARCHAR2",
+          "data_length": 100,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 49
+        },
+        {
+          "column_name": "DOB",
+          "data_type": "DATE",
+          "data_length": 7,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 50
+        },
+        {
+          "column_name": "ADDRESS",
+          "data_type": "VARCHAR2",
+          "data_length": 500,
+          "data_precision": null,
+          "data_scale": null,
+          "nullable": "Y",
+          "position": 51
+        }
+      ]
+    }
+  }
+}

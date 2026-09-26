@@ -1,0 +1,11 @@
+[
+    {
+        "prompt": "How many policies are there",
+        "sql": "SELECT\n    COUNT(DISTINCT \"ISSUED_POLICIES\") AS RESULT_COUNT\nFROM \"AGENCY_DASHBOARD\"",
+        "result": [
+            {
+                "RESULT_COUNT": 1
+            }
+        ]
+    }
+]

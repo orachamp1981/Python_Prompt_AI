@@ -1,0 +1,10 @@
+D:\Application\Python_AI\
+│
+├── app.py                  # MAIN RUN FILE: Tying Login and ChatGPT UI together
+├── databases.py            # Cleaned Thick Client Connection engine for PQTEPF & PQGTL
+│
+├── auth_manager.py         # Login screen logic and encrypted credentials checking
+├── history_manager.py      # SQLite operations to read/write user-wise chat tables
+├── download_manager.py     # Converts interactive gridded pandas data frames into downloads
+│
+└── .env                    # Environment control matching local and server paths

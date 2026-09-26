@@ -1,0 +1,23 @@
+{
+  "CLIENT": {
+    "synonyms": [
+      "Client Name",
+      "Participant Name",
+      "Customer",
+      "Client"
+    ],
+    "source": "manual",
+    "status": "confirmed"
+  },
+  "NATIONAL_ID": {
+    "synonyms": [
+      "CNIC Number",
+      "CNIC",
+      "National Identity Card Number",
+      "NIC Number",
+      "Identity Card No"
+    ],
+    "source": "manual",
+    "status": "confirmed"
+  }
+}
