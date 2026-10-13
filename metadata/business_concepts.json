@@ -1,0 +1,137 @@
+{
+  "packages": {
+    "PQTEPF.PKG_BIEL_MBS": {
+      "direct_concepts": [
+        {
+          "id": "policy_count",
+          "table": "EPF_UW_DOCUMENT",
+          "field": "DOCUMENT_ID_PK",
+          "aggregation": "COUNT",
+          "heading": "Total Number of Policies",
+          "aliases": [
+            "policy count",
+            "number of policies",
+            "total policies",
+            "total number of policies",
+            "how many policies"
+          ],
+          "source": "user-confirmed"
+        }
+      ],
+      "lookup_concepts": [
+        {
+          "id": "policies_by_cnic",
+          "aliases": [
+            "policy",
+            "policies",
+            "policy number",
+            "policy numbers"
+          ],
+          "input": {
+            "field": "T2.CNIC_NO",
+            "aliases": [
+              "CNIC",
+              "CNIC number",
+              "national identity card number",
+              "identity card number"
+            ],
+            "pattern": "\\b\\d{13}\\b",
+            "bind": "P_CNIC"
+          },
+          "from": {
+            "table": "EPF_UW_DOCUMENT",
+            "alias": "T1"
+          },
+          "joins": [
+            {
+              "type": "JOIN",
+              "table": "EPF_UW_EMPLOYEES",
+              "alias": "T2",
+              "left": "T1.DOCUMENT_ID_PK",
+              "right": "T2.DOCUMENT_ID_FK"
+            }
+          ],
+          "conditions": [
+            {
+              "field": "T1.COMPANYID_FK",
+              "operator": "=",
+              "bind": "P_COMPANY_CODE"
+            }
+          ],
+          "output": {
+            "field": "T1.DOCUMENT_CODE",
+            "heading": "Policy Number"
+          },
+          "source": "user-confirmed"
+        }
+      ],
+      "procedures": {
+        "MBS_DOCUMENT_DETAIL": {
+          "concepts": [
+            {
+              "id": "business_amount",
+              "field": "RECEIVED_AMOUNT",
+              "role": "measure",
+              "aggregation": "SUM",
+              "aliases": [
+                "business",
+                "business amount",
+                "business value",
+                "contribution",
+                "topup",
+                "top up",
+                "top-up",
+                "top up for the month",
+                "top-up collection"
+              ],
+              "source": "user-confirmed"
+            },
+            {
+              "id": "case_count",
+              "field": "DOCUMENT_CODE",
+              "role": "measure",
+              "aggregation": "COUNT",
+              "aliases": [
+                "case",
+                "cases",
+                "case count",
+                "number of cases"
+              ],
+              "source": "user-confirmed"
+            },
+            {
+              "id": "policy_count",
+              "field": "DOCUMENT_CODE",
+              "role": "measure",
+              "aggregation": "COUNT_DISTINCT",
+              "aliases": [
+                "policy count",
+                "number of policies",
+                "distinct policies",
+                "unique policies"
+              ],
+              "source": "user-confirmed"
+            },
+            {
+              "id": "policy_registration_date",
+              "field": "SUBMISSION_DATE",
+              "role": "dimension",
+              "aliases": [
+                "year",
+                "policy registration date",
+                "registration date",
+                "policy registered date",
+                "date policy was registered",
+                "policy registration",
+                "registration year",
+                "year of registration",
+                "registered policy year"
+              ],
+              "source": "user-confirmed"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
